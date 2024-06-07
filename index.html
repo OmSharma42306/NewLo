@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location-based Attendance System</title>
+</head>
+<body>
+    <h1>Location-based Attendance System</h1>
+    <button id="set-location-1">Set Corner 1</button>
+    <button id="set-location-2" disabled>Set Corner 2</button>
+    <button id="set-location-3" disabled>Set Corner 3</button>
+    <button id="set-location-4" disabled>Set Corner 4</button>
+    <button id="check-location" disabled>Check Location</button>
+    <div id="status"></div>
+    <div id="coordinates"></div>
+
+    <script>
+        let cornerCoordinates = [];
+        let currentCorner = 0;
+
+        document.getElementById('set-location-1').addEventListener('click', () => setLocation(1));
+        document.getElementById('set-location-2').addEventListener('click', () => setLocation(2));
+        document.getElementById('set-location-3').addEventListener('click', () => setLocation(3));
+        document.getElementById('set-location-4').addEventListener('click', () => setLocation(4));
+        document.getElementById('check-location').addEventListener('click', checkLocation);
+
+        function setLocation(cornerNumber) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    setCornerCoordinates(cornerNumber, position);
+                }, errorCallback);
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        function setCornerCoordinates(cornerNumber, position) {
+            const coordinates = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            cornerCoordinates[cornerNumber - 1] = coordinates;
+            currentCorner++;
+
+            document.getElementById('coordinates').innerText += 
+                `Corner ${cornerNumber} Coordinates: Latitude: ${coordinates.latitude}, Longitude: ${coordinates.longitude}\n`;
+
+            document.getElementById(`set-location-${cornerNumber}`).disabled = true;
+            if (cornerNumber < 4) {
+                document.getElementById(`set-location-${cornerNumber + 1}`).disabled = false;
+            }
+
+            if (currentCorner === 4) {
+                document.getElementById('status').innerText = 'All corners set.';
+                document.getElementById('check-location').disabled = false;
+            }
+        }
+
+        function checkLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const userCoordinates = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    document.getElementById('coordinates').innerText += 
+                        `Current Coordinates: Latitude: ${userCoordinates.latitude}, Longitude: ${userCoordinates.longitude}\n`;
+
+                    if (isInsidePolygon(userCoordinates, cornerCoordinates)) {
+                        document.getElementById('status').innerText = 'You are within the classroom boundaries.';
+                    } else {
+                        document.getElementById('status').innerText = 'You are outside the classroom boundaries.';
+                    }
+                }, errorCallback);
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        function errorCallback(error) {
+            console.error(error);
+            document.getElementById('status').innerText = 'Error fetching location.';
+        }
+
+        // Function to check if a point is inside a polygon using the Ray-Casting algorithm
+        function isInsidePolygon(point, polygon) {
+            const x = point.latitude;
+            const y = point.longitude;
+
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].latitude, yi = polygon[i].longitude;
+                const xj = polygon[j].latitude, yj = polygon[j].longitude;
+
+                const intersect = ((yi > y) != (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+    </script>
+</body>
+</html>
