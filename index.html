@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location-based Attendance System</title>
+    <title>Location-based Attendance System with Floor Selection</title>
 </head>
 <body>
-    <h1>Location-based Attendance System</h1>
+    <h1>Location-based Attendance System with Floor Selection</h1>
+    <label for="floor-select">Select Floor:</label>
+    <select id="floor-select">
+        <option value="ground">Ground Floor</option>
+        <option value="first">First Floor</option>
+    </select>
     <button id="set-location-1">Set Corner 1</button>
     <button id="set-location-2" disabled>Set Corner 2</button>
     <button id="set-location-3" disabled>Set Corner 3</button>
@@ -16,8 +21,14 @@
     <div id="coordinates"></div>
 
     <script>
-        let cornerCoordinates = [];
+        let cornerCoordinates = {};
         let currentCorner = 0;
+        let selectedFloor = 'ground';
+
+        document.getElementById('floor-select').addEventListener('change', (event) => {
+            selectedFloor = event.target.value;
+            resetCorners();
+        });
 
         document.getElementById('set-location-1').addEventListener('click', () => setLocation(1));
         document.getElementById('set-location-2').addEventListener('click', () => setLocation(2));
@@ -29,7 +40,7 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition((position) => {
                     setCornerCoordinates(cornerNumber, position);
-                }, errorCallback);
+                }, errorCallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
             } else {
                 alert('Geolocation is not supported by this browser.');
             }
@@ -40,11 +51,15 @@
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude
             };
-            cornerCoordinates[cornerNumber - 1] = coordinates;
+            if (!cornerCoordinates[selectedFloor]) {
+                cornerCoordinates[selectedFloor] = [];
+            }
+            cornerCoordinates[selectedFloor][cornerNumber - 1] = coordinates;
             currentCorner++;
 
             document.getElementById('coordinates').innerText += 
-                `Corner ${cornerNumber} Coordinates: Latitude: ${coordinates.latitude}, Longitude: ${coordinates.longitude}\n`;
+                `Floor ${selectedFloor} - Corner ${cornerNumber} Coordinates: Latitude: ${coordinates.latitude}, Longitude: ${coordinates.longitude}\n`;
+            console.log(`Floor ${selectedFloor} - Corner ${cornerNumber} set to:`, coordinates);
 
             document.getElementById(`set-location-${cornerNumber}`).disabled = true;
             if (cornerNumber < 4) {
@@ -66,13 +81,14 @@
                     };
                     document.getElementById('coordinates').innerText += 
                         `Current Coordinates: Latitude: ${userCoordinates.latitude}, Longitude: ${userCoordinates.longitude}\n`;
+                    console.log('Current Coordinates:', userCoordinates);
 
-                    if (isInsidePolygon(userCoordinates, cornerCoordinates)) {
+                    if (isInsidePolygon(userCoordinates, cornerCoordinates[selectedFloor])) {
                         document.getElementById('status').innerText = 'You are within the classroom boundaries.';
                     } else {
                         document.getElementById('status').innerText = 'You are outside the classroom boundaries.';
                     }
-                }, errorCallback);
+                }, errorCallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
             } else {
                 alert('Geolocation is not supported by this browser.');
             }
@@ -83,7 +99,6 @@
             document.getElementById('status').innerText = 'Error fetching location.';
         }
 
-        // Function to check if a point is inside a polygon using the Ray-Casting algorithm
         function isInsidePolygon(point, polygon) {
             const x = point.latitude;
             const y = point.longitude;
@@ -99,6 +114,17 @@
             }
 
             return inside;
+        }
+
+        function resetCorners() {
+            currentCorner = 0;
+            document.getElementById('coordinates').innerText = '';
+            document.getElementById('status').innerText = '';
+            document.getElementById('set-location-1').disabled = false;
+            document.getElementById('set-location-2').disabled = true;
+            document.getElementById('set-location-3').disabled = true;
+            document.getElementById('set-location-4').disabled = true;
+            document.getElementById('check-location').disabled = true;
         }
     </script>
 </body>
